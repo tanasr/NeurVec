@@ -1,7 +1,7 @@
 import numpy as np
 import torch
-from torch.autograd import grad
-from tqdm import tqdm
+# from torch.autograd import grad
+# from tqdm import tqdm
 import torch.nn as nn
 import os
 from torch.nn.parameter import Parameter
@@ -9,6 +9,7 @@ import torch.nn.parallel
 
 os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 import time
@@ -71,7 +72,8 @@ def F(u):
 
 def rk4(u_0, Func, T, dt, volatile=True):
 
-    trajectories = torch.empty((T, u_0.shape[0], u_0.shape[1]), requires_grad=False).cuda()
+    # trajectories = torch.empty((T, u_0.shape[0], u_0.shape[1]), requires_grad=False).cuda()
+    trajectories = torch.empty((T, u_0.shape[0], u_0.shape[1]), requires_grad=False).to(device)
     print('trajectories shape',trajectories.shape)
     u = u_0
 
@@ -113,8 +115,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     ckpt = args.ckpt
-    model = NeurVec().cuda()
-    model.load_state_dict(torch.load(ckpt+'/ckpt_500.pth.tar')['state_dict'])
+    # model = NeurVec().cuda()
+    model = NeurVec().to(device)
+    # model.load_state_dict(torch.load(ckpt+'/ckpt_500.pth.tar')['state_dict'])
+    model.load_state_dict(torch.load(ckpt+'/ckpt_500.pth.tar',map_location=device)['state_dict'])
     T = 500
     dt = args.dt
     volatile = False
@@ -123,7 +127,8 @@ if __name__ == '__main__':
         print(index)
 
         test_data = np.load('../../data/elastic_pend/testset/springball_'+str(index)+'_0.1_coarse1000.npy')
-        trajectories = numerically_integrate_rk4(torch.from_numpy(test_data[0,:,:]).cuda(), model, T, dt, volatile)
+        # trajectories = numerically_integrate_rk4(torch.from_numpy(test_data[0,:,:]).cuda(), model, T, dt, volatile)
+        trajectories = numerically_integrate_rk4(torch.from_numpy(test_data[0,:,:]).to(device), model, T, dt, volatile)
 
         np.save('test_neurvec_'+str(index), trajectories.cpu().detach().numpy())
         del(trajectories)
